@@ -18,7 +18,10 @@ class Category(models.Model):
         return u'--' * self.level
     
     def get_properties(self):
-        pass
+        types = [k for k, v in Property.VALUE_TYPES if v in ('Choice', 'Tree')]
+        categories = [category.pk for category in self.get_ancestors()]
+        categories.append(self.pk)
+        return Property.objects.filter(categories__in=categories, type__in=types)
 
 mptt.register(Category)
 
@@ -40,6 +43,10 @@ class Property(models.Model):
     
     def __unicode__(self):
         return u'%s' % self.name
+    
+    def get_values(self):
+        model = 'PropertyValue' + dict(self.VALUE_TYPES)[self.type]
+        return eval(model).objects.filter(property=self)
 
 class PropertyValue(models.Model):
     property        = models.ForeignKey(Property)
