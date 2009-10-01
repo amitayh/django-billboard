@@ -5,7 +5,6 @@ class Category(models.Model):
     name            = models.CharField(max_length=255, unique=True)
     description     = models.TextField(null=True, blank=True)
     parent          = models.ForeignKey('self', null=True, blank=True, related_name='children')
-    properties      = models.ManyToManyField('Property')
     ads_count       = models.IntegerField(default=0)
     
     class Meta:
@@ -14,6 +13,9 @@ class Category(models.Model):
     
     def __unicode__(self):
         return u'%s' % self.name
+    
+    def offset(self):
+        return u'--' * self.level
     
     def get_properties(self):
         pass
@@ -31,11 +33,16 @@ class Property(models.Model):
     name            = models.CharField(max_length=255, unique=True)
     description     = models.TextField(null=True, blank=True)
     type            = models.IntegerField(choices=VALUE_TYPES, default=0)
+    categories      = models.ManyToManyField(Category)
+    
+    class Meta:
+        verbose_name_plural = 'Properties'
     
     def __unicode__(self):
         return u'%s' % self.name
 
 class PropertyValue(models.Model):
+    property        = models.ForeignKey(Property)
     value           = models.CharField(max_length=255)
 
     class Meta:
@@ -52,6 +59,9 @@ class PropertyValueChoice(PropertyValue):
 
 class PropertyValueTree(PropertyValue):
     parent          = models.ForeignKey('self', null=True, blank=True, related_name='children')
+    
+    class Meta:
+        ordering = ['tree_id', 'lft']
 
 mptt.register(PropertyValueTree)
 
