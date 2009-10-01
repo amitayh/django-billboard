@@ -21,7 +21,7 @@ class Category(models.Model):
         types = [k for k, v in Property.VALUE_TYPES if v in ('Choice', 'Tree')]
         categories = [category.pk for category in self.get_ancestors()]
         categories.append(self.pk)
-        return Property.objects.filter(categories__in=categories, type__in=types)
+        return Property.objects.filter(type__in=types, categories__in=categories)
 
 mptt.register(Category)
 

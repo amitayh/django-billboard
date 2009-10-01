@@ -8,5 +8,8 @@ def index(request):
         'categories': categories,
     })
 
-def category(request):
-    pass
+def category(request, category_id):
+    category = get_object_or_404(Category, pk=category_id)
+    return render_response(request, 'billboard/category.html', {
+        'category': category,
+    })
