@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, connection
 import mptt
 
 class Category(models.Model):
@@ -87,7 +87,39 @@ class Ad(models.Model):
         return u'%s' % self.name
     
     def get_properties(self):
-        pass
+        case_sql = []
+        join_sql = []
+        for type_id, type_name in Property.VALUE_TYPES:
+            model = eval('PropertyValue' + type_name)
+            db_table = model._meta.db_table
+            case_sql.append('WHEN %d THEN `%s`.`value`' % (type_id, db_table))
+            join_sql.append('LEFT JOIN `%s` ON (`{property}`.`type` = %d AND `{adpropertyvalue}`.`property_value` = `%s`.`id`)' % (db_table, type_id, db_table))
+        
+        sql = """
+            SELECT
+                `{property}`.`id`,
+                `{property}`.`name`,
+                CASE `{property}`.`type`
+                    {case_sql}
+                END `value`
+            FROM `{property}`
+            JOIN `{adpropertyvalue}` ON `{property}`.`id` = `{adpropertyvalue}`.`property_id`
+            {join_sql}
+            WHERE `{adpropertyvalue}`.`ad_id` = %d
+        """
+        
+        params = (
+            ('case_sql', "\n".join(case_sql)),
+            ('join_sql', "\n".join(join_sql)),
+            ('property', Property._meta.db_table),
+            ('adpropertyvalue', AdPropertyValue._meta.db_table),
+        )
+        
+        for k, v in params: sql = sql.replace('{%s}' % k, v)
+        
+        cursor = connection.cursor()
+        cursor.execute(sql % self.pk)
+        return cursor.fetchall()
 
 class AdPropertyValue(models.Model):
     ad              = models.ForeignKey(Ad)

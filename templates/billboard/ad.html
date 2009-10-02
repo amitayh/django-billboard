@@ -1,0 +1,27 @@
+{% extends "billboard/base.html" %}
+
+{% block title %}{{ block.super }} | {{ ad.name }}{% endblock %}
+
+{% block content %}
+
+{{ block.super }}
+
+<ul id="breadcrumbs">
+    <li><a href="{% url billboard-index %}">Index</a></li>
+</ul>
+
+<h2>{{ ad.name }}</h2>
+{% if ad.description %}
+    <p>{{ ad.description }}</p>
+{% endif %}
+
+<table class="zebra">
+    {% for property_id, property_name, property_value in ad.get_properties %}
+        <tr class="{% cycle 'odd' 'even' %}">
+            <th class="align-left">{{ property_name }}</th>
+            <td>{{ property_value }}</td>
+        </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}

@@ -6,9 +6,9 @@
 
 {{ block.super }}
 
-<ul>
+<ul id="breadcrumbs">
     <li><a href="{% url billboard-index %}">Index</a></li>
-    {% for topcategory in topcategories %}
+    {% for topcategory in category.get_ancestors %}
         <li><a href="{% url billboard-category topcategory.pk %}">{{ topcategory.name }}</a></li>
     {% endfor %}
     <li>{{ category.name }}</li>
@@ -35,6 +35,8 @@
                 <td>{{ property.name }}</td>
                 <td>
                     <select name="property[{{ property.pk }}]">
+                        <option value="0">Any</option>
+                        <option value="" disabled="disabled">——————————</option>
                         {% for value in property.get_values %}
                             <option value="{{ value.pk }}">{{ value.get_value }}</option>
                         {% endfor %}
@@ -45,6 +47,10 @@
     </table>
 {% endif %}
 
-<hr />
+{% for ad in ads %}
+    <h4><a href="{% url billboard-ad ad.pk %}">{{ ad.name }}</a></h4>
+{% empty %}
+    <p>No results found.</p>
+{% endfor %}
 
 {% endblock %}

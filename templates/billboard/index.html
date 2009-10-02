@@ -4,15 +4,17 @@
 
 {{ block.super }}
 
-<ul>
+<ul id="breadcrumbs">
     <li>Index</li>
 </ul>
 
 <h2>Categories</h2>
-<p>
-    {% for category in categories %}
-        {{ category.offset }}<a href="{% url billboard-category category.pk %}">{{ category.name }}</a><br />
-    {% endfor %}
-</p>
+{% load mptt_tags %}
+{% for category, structure in categories|tree_info %}
+    {% if structure.new_level %}<ul><li>{% else %}</li><li>{% endif %}
+    <a href="{% url billboard-category category.pk %}">{{ category.name }}</a> ({{ category.ads_count }})
+    {% for level in structure.closed_levels %}</li></ul>{% endfor %}
+{% endfor %}
+
 
 {% endblock %}
