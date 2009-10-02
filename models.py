@@ -15,13 +15,13 @@ class Category(models.Model):
         return u'%s' % self.name
     
     def offset(self):
-        return u'--' * self.level
+        return '--' * self.level
     
-    def get_properties(self):
-        types = [k for k, v in Property.VALUE_TYPES if v in ('Choice', 'Tree')]
+    def get_properties(self, types=('Choice', 'Tree')):
+        type_ids = [k for k, v in Property.VALUE_TYPES if v in types]
         categories = [category.pk for category in self.get_ancestors()]
         categories.append(self.pk)
-        return Property.objects.filter(type__in=types, categories__in=categories)
+        return Property.objects.filter(type__in=type_ids, categories__in=categories)
 
 mptt.register(Category)
 
@@ -57,6 +57,9 @@ class PropertyValue(models.Model):
     
     def __unicode__(self):
         return u'%s' % self.value
+    
+    def get_value(self):
+        return u'%s' % self.value
 
 class PropertyValueText(PropertyValue):
     pass
@@ -69,6 +72,9 @@ class PropertyValueTree(PropertyValue):
     
     class Meta:
         ordering = ['tree_id', 'lft']
+    
+    def get_value(self):
+        return u'%s %s' % ('--' * self.level, self.value)
 
 mptt.register(PropertyValueTree)
 

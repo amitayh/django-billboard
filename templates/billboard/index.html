@@ -1,0 +1,18 @@
+{% extends "billboard/base.html" %}
+
+{% block content %}
+
+{{ block.super }}
+
+<ul>
+    <li>Index</li>
+</ul>
+
+<h2>Categories</h2>
+<p>
+    {% for category in categories %}
+        {{ category.offset }}<a href="{% url billboard-category category.pk %}">{{ category.name }}</a><br />
+    {% endfor %}
+</p>
+
+{% endblock %}

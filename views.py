@@ -10,6 +10,12 @@ def index(request):
 
 def category(request, category_id):
     category = get_object_or_404(Category, pk=category_id)
+    topcategories = category.get_ancestors()
+    subcategories = category.get_children()
+    properties = category.get_properties()
     return render_response(request, 'billboard/category.html', {
         'category': category,
+        'topcategories': topcategories,
+        'subcategories': subcategories,
+        'properties': properties,
     })

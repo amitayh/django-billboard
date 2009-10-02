@@ -1,0 +1,50 @@
+{% extends "billboard/base.html" %}
+
+{% block title %}{{ block.super }} | {{ category.name }}{% endblock %}
+
+{% block content %}
+
+{{ block.super }}
+
+<ul>
+    <li><a href="{% url billboard-index %}">Index</a></li>
+    {% for topcategory in topcategories %}
+        <li><a href="{% url billboard-category topcategory.pk %}">{{ topcategory.name }}</a></li>
+    {% endfor %}
+    <li>{{ category.name }}</li>
+</ul>
+
+<h2>{{ category.name }}</h2>
+{% if category.description %}
+    <p>{{ category.description }}</p>
+{% endif %}
+
+{% if subcategories %}
+    <h3>Subcategories</h3>
+    <ul>
+        {% for subcategory in subcategories %}
+            <li><a href="{% url billboard-category subcategory.pk %}">{{ subcategory.name }}</a></li>
+        {% endfor %}
+    </ul>
+{% endif %}
+
+{% if properties %}
+    <table>
+        {% for property in properties %}
+            <tr>
+                <td>{{ property.name }}</td>
+                <td>
+                    <select name="property[{{ property.pk }}]">
+                        {% for value in property.get_values %}
+                            <option value="{{ value.pk }}">{{ value.get_value }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+            </tr>
+        {% endfor %}
+    </table>
+{% endif %}
+
+<hr />
+
+{% endblock %}
