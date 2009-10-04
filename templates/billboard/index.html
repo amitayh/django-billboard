@@ -4,7 +4,7 @@
 
 {{ block.super }}
 
-<ul id="breadcrumbs">
+<ul id="breadcrumbs" class="clearfix">
     <li>Index</li>
 </ul>
 
@@ -12,7 +12,7 @@
 {% load mptt_tags %}
 {% for category, structure in categories|tree_info %}
     {% if structure.new_level %}<ul><li>{% else %}</li><li>{% endif %}
-    <a href="{% url billboard-category category.pk %}">{{ category.name }}</a> ({{ category.ads_count }})
+    <a href="{% url billboard-category category.id %}">{{ category.name }}</a> ({{ category.ads_count }})
     {% for level in structure.closed_levels %}</li></ul>{% endfor %}
 {% endfor %}
 

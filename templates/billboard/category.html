@@ -6,10 +6,12 @@
 
 {{ block.super }}
 
-<ul id="breadcrumbs">
+<ul id="breadcrumbs" class="clearfix">
     <li><a href="{% url billboard-index %}">Index</a></li>
+    <li>&gt;</li>
     {% for topcategory in category.get_ancestors %}
-        <li><a href="{% url billboard-category topcategory.pk %}">{{ topcategory.name }}</a></li>
+        <li><a href="{% url billboard-category topcategory.id %}">{{ topcategory.name }}</a></li>
+        <li>&gt;</li>
     {% endfor %}
     <li>{{ category.name }}</li>
 </ul>
@@ -23,32 +25,37 @@
     <h3>Subcategories</h3>
     <ul>
         {% for subcategory in subcategories %}
-            <li><a href="{% url billboard-category subcategory.pk %}">{{ subcategory.name }}</a></li>
+            <li><a href="{% url billboard-category subcategory.id %}">{{ subcategory.name }}</a></li>
         {% endfor %}
     </ul>
 {% endif %}
 
 {% if properties %}
-    <table>
-        {% for property in properties %}
-            <tr>
-                <td>{{ property.name }}</td>
-                <td>
-                    <select name="property[{{ property.pk }}]">
-                        <option value="0">Any</option>
-                        <option value="" disabled="disabled">——————————</option>
-                        {% for value in property.get_values %}
-                            <option value="{{ value.pk }}">{{ value.get_value }}</option>
-                        {% endfor %}
-                    </select>
-                </td>
-            </tr>
-        {% endfor %}
-    </table>
+    <form action="" method="get">
+        <table>
+            {% for property in properties %}
+                <tr>
+                    <td>{{ property.name }}</td>
+                    <td>
+                        <select name="property[{{ property.id }}]">
+                            <option value="0">Any</option>
+                            <option value="" disabled="disabled">——————————</option>
+                            {% for value in property.get_values %}
+                                <option value="{{ value.id }}">{{ value.get_value }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+        <p><input type="submit" value="Filter Results" />
+    </form>
 {% endif %}
 
+<hr />
+
 {% for ad in ads %}
-    <h4><a href="{% url billboard-ad ad.pk %}">{{ ad.name }}</a></h4>
+    <h4><a href="{% url billboard-ad ad.id %}">{{ ad.name }}</a></h4>
 {% empty %}
     <p>No results found.</p>
 {% endfor %}

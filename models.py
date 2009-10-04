@@ -1,3 +1,4 @@
+from django import forms
 from django.db import models, connection
 import mptt
 
@@ -14,13 +15,10 @@ class Category(models.Model):
     def __unicode__(self):
         return u'%s' % self.name
     
-    def offset(self):
-        return '--' * self.level
-    
     def get_properties(self, types=('Choice', 'Tree')):
         type_ids = [k for k, v in Property.VALUE_TYPES if v in types]
-        categories = [category.pk for category in self.get_ancestors()]
-        categories.append(self.pk)
+        categories = [category.id for category in self.get_ancestors()]
+        categories.append(self.id)
         return Property.objects.filter(type__in=type_ids, categories__in=categories)
 
 mptt.register(Category)
@@ -46,11 +44,12 @@ class Property(models.Model):
     
     def get_values(self):
         model = 'PropertyValue' + dict(self.VALUE_TYPES)[self.type]
-        return eval(model).objects.filter(property=self)
+        return globals()[model].objects.filter(property=self)
 
 class PropertyValue(models.Model):
     property        = models.ForeignKey(Property)
     value           = models.CharField(max_length=255)
+    field           = forms.CharField
 
     class Meta:
         abstract = True
@@ -65,10 +64,11 @@ class PropertyValueText(PropertyValue):
     pass
 
 class PropertyValueChoice(PropertyValue):
-    pass
+    field           = forms.ChoiceField
 
 class PropertyValueTree(PropertyValue):
     parent          = models.ForeignKey('self', null=True, blank=True, related_name='children')
+    field           = forms.ChoiceField
     
     class Meta:
         ordering = ['tree_id', 'lft']
@@ -81,7 +81,7 @@ mptt.register(PropertyValueTree)
 class Ad(models.Model):
     name            = models.CharField(max_length=255)
     description     = models.TextField()
-    categories      = models.ManyToManyField(Category)
+    category        = models.ForeignKey(Category)
     
     def __unicode__(self):
         return u'%s' % self.name
@@ -89,36 +89,40 @@ class Ad(models.Model):
     def get_properties(self):
         case_sql = []
         join_sql = []
+        property_db_table = Property._meta.db_table
+        adpropertyvalue_db_table = AdPropertyValue._meta.db_table
         for type_id, type_name in Property.VALUE_TYPES:
-            model = eval('PropertyValue' + type_name)
+            model = globals()['PropertyValue' + type_name]
             db_table = model._meta.db_table
-            case_sql.append('WHEN %d THEN `%s`.`value`' % (type_id, db_table))
-            join_sql.append('LEFT JOIN `%s` ON (`{property}`.`type` = %d AND `{adpropertyvalue}`.`property_value` = `%s`.`id`)' % (db_table, type_id, db_table))
+            case_sql.append('WHEN %(type_id)d THEN `%(db_table)s`.`value`' % {'type_id': type_id, 'db_table': db_table})
+            join_sql.append(
+                'LEFT JOIN `%(db_table)s` ON (`%(property)s`.`type` = %(type_id)d AND `%(adpropertyvalue)s`.`property_value` = `%(db_table)s`.`id`)' %
+                {'db_table': db_table, 'type_id': type_id, 'property': property_db_table, 'adpropertyvalue': adpropertyvalue_db_table}
+            )
         
         sql = """
             SELECT
-                `{property}`.`id`,
-                `{property}`.`name`,
-                CASE `{property}`.`type`
-                    {case_sql}
+                `%(property)s`.`id`,
+                `%(property)s`.`name`,
+                CASE `%(property)s`.`type`
+                    %(case_sql)s
                 END `value`
-            FROM `{property}`
-            JOIN `{adpropertyvalue}` ON `{property}`.`id` = `{adpropertyvalue}`.`property_id`
-            {join_sql}
-            WHERE `{adpropertyvalue}`.`ad_id` = %d
+            FROM `%(property)s`
+            JOIN `%(adpropertyvalue)s` ON `%(property)s`.`id` = `%(adpropertyvalue)s`.`property_id`
+            %(join_sql)s
+            WHERE `%(adpropertyvalue)s`.`ad_id` = %(ad_id)d
         """
         
-        params = (
-            ('case_sql', "\n".join(case_sql)),
-            ('join_sql', "\n".join(join_sql)),
-            ('property', Property._meta.db_table),
-            ('adpropertyvalue', AdPropertyValue._meta.db_table),
-        )
-        
-        for k, v in params: sql = sql.replace('{%s}' % k, v)
+        params = {
+            'case_sql': "\n".join(case_sql),
+            'join_sql': "\n".join(join_sql),
+            'property': property_db_table,
+            'adpropertyvalue': adpropertyvalue_db_table,
+            'ad_id': self.id
+        }
         
         cursor = connection.cursor()
-        cursor.execute(sql % self.pk)
+        cursor.execute(sql % params)
         return cursor.fetchall()
 
 class AdPropertyValue(models.Model):

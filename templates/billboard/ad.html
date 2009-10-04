@@ -6,8 +6,10 @@
 
 {{ block.super }}
 
-<ul id="breadcrumbs">
+<ul id="breadcrumbs" class="clearfix">
     <li><a href="{% url billboard-index %}">Index</a></li>
+    <li>&gt;</li>
+    <li>{{ ad.name }}</li>
 </ul>
 
 <h2>{{ ad.name }}</h2>
@@ -23,5 +25,11 @@
         </tr>
     {% endfor %}
 </table>
+
+<h3>Reviews</h3>
+<p>...</p>
+
+<h3>Comments</h3>
+<p>...</p>
 
 {% endblock %}

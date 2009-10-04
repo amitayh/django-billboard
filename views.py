@@ -9,10 +9,10 @@ def index(request):
     })
 
 def category(request, category_id):
-    category = get_object_or_404(Category, pk=category_id)
+    category = get_object_or_404(Category, id=category_id)
     subcategories = category.get_children()
     properties = category.get_properties()
-    ads = Ad.objects.filter(categories__in=category.get_descendants(include_self=True))
+    ads = Ad.objects.filter(category__in=category.get_descendants(include_self=True))
     return render_response(request, 'billboard/category.html', {
         'category': category,
         'subcategories': subcategories,
@@ -21,7 +21,7 @@ def category(request, category_id):
     })
 
 def ad(request, ad_id):
-    ad = get_object_or_404(Ad, pk=ad_id)
+    ad = get_object_or_404(Ad, id=ad_id)
     return render_response(request, 'billboard/ad.html', {
         'ad': ad,
     })
