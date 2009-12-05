@@ -3,22 +3,6 @@ from django.db import models, connection
 from math import ceil
 import mptt
 
-"""
-SELECT billboard_ad.*
-FROM billboard_ad
-JOIN billboard_adpropertyvalue a ON a.ad_id = billboard_ad.id
-JOIN billboard_adpropertyvalue b ON b.ad_id = billboard_ad.id
-WHERE billboard_ad.category_id IN (1, 2, 6)
-AND a.property_id = 1 AND a.property_value = 1
-AND b.property_id = 5 AND b.property_value = 11
-GROUP BY billboard_ad.id
-
-
-from django.db.models import Q
-AdPropertyValue.objects.select_related('ad').filter(Q(property=1, property_value=1) | Q(property=2, property_value=4))
-
-"""
-
 class Category(models.Model):
     name            = models.CharField(max_length=255, unique=True)
     description     = models.TextField(null=True, blank=True)
@@ -32,29 +16,41 @@ class Category(models.Model):
     def __unicode__(self):
         return u'%s' % self.name
     
-    def get_ads(self, search=[], ads_per_page=15, page=1):
+    def get_ads(self, filter=[], ads_per_page=15, page=1):
         ads_per_page = int(ads_per_page)
         page = int(page)
+        if page < 1:
+            page = 1
         ad_db_table = Ad._meta.db_table
         adpropertyvalue_db_table = AdPropertyValue._meta.db_table
         join_sql = []
         where_sql = []
-        if search:
-            for property, value in search:
+        if filter:
+            
+            filter_properties_ids = [property for property, value in filter]
+            filter_properties = [(property.id, property.type) for property in Property.objects.filter(id__in=filter_properties_ids)]
+            properties = {}
+            for property_id, property_type in filter_properties:
+                model = 'PropertyValue' + dict(Property.VALUE_TYPES)[property_type]
+                properties[property_id] = globals()[model]
+            
+            for property, value in filter:
                 join_sql.append(
                     'JOIN `%(adpropertyvalue)s` `p%(property)d` ON `p%(property)d`.`ad_id` = `%(ad)s`.`id`' %
                     {'adpropertyvalue': adpropertyvalue_db_table, 'property': property, 'ad': ad_db_table}
                 )
-                where_sql.append(
-                    'AND `p%(property)d`.`property_id` = %(property)d AND `p%(property)d`.`property_value` = %(property_value)d' %
-                    {'property': property, 'property_value': value}
-                )
+                where_sql.append(properties[property].get_filter_sql(property, value))
         
         sql = """
             SELECT SQL_CALC_FOUND_ROWS `%(ad)s`.*
             FROM `%(ad)s`
             %(join_sql)s
-            WHERE `%(ad)s`.`category_id` IN (%(categories)s)
+            WHERE `%(ad)s`.`category_id` IN (
+                SELECT `id`
+                FROM `%(category)s`
+                WHERE `lft` >= %(category_left)d
+                AND `rght` <= %(category_right)d
+            )
             %(where_sql)s
             GROUP BY `%(ad)s`.`id`
             LIMIT %(offset)d, %(rowcount)d
@@ -62,8 +58,10 @@ class Category(models.Model):
         
         params = {
             'ad': ad_db_table,
+            'category': self._meta.db_table,
+            'category_left': self.lft,
+            'category_right': self.rght,
             'join_sql': "\n".join(join_sql),
-            'categories': ', '.join([str(category.id) for category in self.get_descendants(include_self=True)]),
             'where_sql': "\n".join(where_sql),
             'offset': (page - 1) * ads_per_page,
             'rowcount': ads_per_page
@@ -75,11 +73,14 @@ class Category(models.Model):
         
         cursor.execute("SELECT FOUND_ROWS()")
         found_rows = int(cursor.fetchone()[0])
+        num_pages = int(ceil(found_rows / float(ads_per_page)))
         
         return {
             'object_list': ads,
             'count': found_rows,
-            'num_pages': int(ceil(found_rows / float(ads_per_page)))
+            'num_pages': num_pages,
+            'current_page': page,
+            'page_range': range(1, num_pages + 1)
         }
     
     def get_properties(self, types=('Choice', 'Tree')):
@@ -135,6 +136,14 @@ class PropertyValue(models.Model):
     
     def get_value(self):
         return u'%s' % self.value
+    
+    @staticmethod
+    def get_filter_sql(property, value):
+        pattern = """
+            AND `p%(property)d`.`property_id` = %(property)d
+            AND `p%(property)d`.`property_value` = %(property_value)d
+        """
+        return pattern % {'property': property, 'property_value': value}
 
 class PropertyValueText(PropertyValue):
     pass
@@ -151,6 +160,24 @@ class PropertyValueTree(PropertyValue):
     
     def get_value(self):
         return u'%s %s' % ('--' * self.level, self.value)
+    
+    @staticmethod
+    def get_filter_sql(property, value):
+        pattern = """
+            AND `p%(property)d`.`property_id` = %(property)d
+            AND `p%(property)d`.`property_value` IN (
+                SELECT `p%(property)d_a`.`id`
+                FROM `%(propertyvaluetree)s` `p%(property)d_a`
+                JOIN `%(propertyvaluetree)s` `p%(property)d_b` ON (
+                    `p%(property)d_a`.`property_id` = `p%(property)d_b`.`property_id`
+                    AND `p%(property)d_a`.`tree_id` = `p%(property)d_b`.`tree_id`
+                    AND `p%(property)d_a`.`lft` >= `p%(property)d_b`.`lft`
+                    AND `p%(property)d_a`.`rght` <= `p%(property)d_b`.`rght`
+                )
+                WHERE `p%(property)d_b`.`id` = %(property_value)d
+            )
+        """
+        return pattern % {'propertyvaluetree': PropertyValueTree._meta.db_table, 'property': property, 'property_value': value}
 
 mptt.register(PropertyValueTree)
 
@@ -204,8 +231,6 @@ class Ad(models.Model):
             'adpropertyvalue': adpropertyvalue_db_table,
             'ad_id': self.id
         }
-        
-        # return sql % params
         
         cursor = connection.cursor()
         cursor.execute(sql % params)

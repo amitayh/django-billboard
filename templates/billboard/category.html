@@ -64,8 +64,8 @@
     <hr />
     <p>Found {{ ads.count }} result{{ ads.count|pluralize }}</p>
     <ul class="pagination">
-        {% for page in page_range %}
-            {% ifequal page current_page %}
+        {% for page in ads.page_range %}
+            {% ifequal page ads.current_page %}
                 <li class="current">{{ page }}</li>
             {% else %}
                 <li><a href="{% url billboard-category category.id page %}">{{ page }}</a></li>

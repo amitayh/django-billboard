@@ -15,18 +15,16 @@ def category(request, category_id, page=1):
     category = get_object_or_404(Category, id=category_id)
     subcategories = category.get_children()
     properties = category.get_properties()
-    search = []
+    filter = []
     request_lists = dict(request.GET.lists())
     if 'p' in request_lists:
-        search = [map(lambda x: int(x), v.split('_')) for v in request_lists['p'] if v != '0']
-    ads = category.get_ads(search, ads_per_page=ads_per_page, page=page)
+        filter = [map(lambda x: int(x), v.split('_')) for v in request_lists['p'] if v != '0']
+    ads = category.get_ads(filter, ads_per_page=ads_per_page, page=page)
     return render_response(request, 'billboard/category.html', {
         'category': category,
         'subcategories': subcategories,
         'properties': properties,
-        'ads': ads,
-        'page_range': range(1, ads['num_pages'] + 1),
-        'current_page': int(page)
+        'ads': ads
     })
 
 def ad(request, ad_id):
