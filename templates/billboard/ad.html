@@ -17,12 +17,22 @@
     <p>{{ ad.description }}</p>
 {% endif %}
 
+{% comment %}
+<pre>{{ ad.get_properties }}</pre>
+{% endcomment %}
+
 <table class="zebra">
-    {% for property_id, property_name, property_value in ad.get_properties %}
-        <tr class="{% cycle 'odd' 'even' %}">
-            <th class="align-left">{{ property_name }}</th>
-            <td>{{ property_value }}</td>
+    {% for set, properties in ad.get_properties %}
+        <tr class="even">
+            <th colspan="2">{{ set }}</th>
         </tr>
+        {% for property_id, property_name, property_value in properties %}
+            {# <tr class="{% cycle 'odd' 'even' %}"> #}
+            <tr>
+                <th class="align-left">{{ property_name }}</th>
+                <td>{{ property_value }}</td>
+            </tr>
+        {% endfor %}
     {% endfor %}
 </table>
 

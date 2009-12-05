@@ -37,27 +37,43 @@
                 <tr>
                     <td>{{ property.name }}</td>
                     <td>
-                        <select name="property[{{ property.id }}]">
+                        <select name="p">
                             <option value="0">Any</option>
                             <option value="" disabled="disabled">——————————</option>
                             {% for value in property.get_values %}
-                                <option value="{{ value.id }}">{{ value.get_value }}</option>
+                                <option value="{{ property.id }}_{{ value.id }}">{{ value.get_value }}</option>
                             {% endfor %}
                         </select>
                     </td>
                 </tr>
             {% endfor %}
         </table>
-        <p><input type="submit" value="Filter Results" />
+        <p><input type="submit" value="Filter Results" /></p>
     </form>
 {% endif %}
 
 <hr />
 
-{% for ad in ads %}
-    <h4><a href="{% url billboard-ad ad.id %}">{{ ad.name }}</a></h4>
-{% empty %}
+{% if ads.count %}
+    {% for ad in ads.object_list %}
+        <div class="ad">
+            <h3><a href="{% url billboard-ad ad.id %}">{{ ad.name }}</a></h3>
+            <p>{{ ad.description|truncatewords:50 }}</p>
+        </div>
+    {% endfor %}
+    <hr />
+    <p>Found {{ ads.count }} result{{ ads.count|pluralize }}</p>
+    <ul class="pagination">
+        {% for page in page_range %}
+            {% ifequal page current_page %}
+                <li class="current">{{ page }}</li>
+            {% else %}
+                <li><a href="{% url billboard-category category.id page %}">{{ page }}</a></li>
+            {% endifequal %}
+        {% endfor %}
+    </ul>
+{% else %}
     <p>No results found.</p>
-{% endfor %}
+{% endif %}
 
 {% endblock %}
